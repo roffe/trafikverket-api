@@ -10,9 +10,9 @@ import (
 
 // Settings
 var (
-	Debug       = true // Be verbose
-	IndentChar  = "  " // The PrettyPrint indentation character(s)
-	PrettyPrint = true // Should we print with indentation using IndentChar
+	Debug       = false // Be verbose
+	IndentChar  = "  "  // The PrettyPrint indentation character(s)
+	PrettyPrint = true  // Should we print with indentation using IndentChar
 )
 
 const (
