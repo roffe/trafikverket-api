@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 
 	trv "github.com/roffe/trafikverket-api"
@@ -60,20 +59,12 @@ func main() {
 	)
 
 	resp, err := req.Do()
-	if resp.Body != nil {
-		defer resp.Body.Close()
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var res map[string]interface{}
-	if err := json.Unmarshal(body, &res); err != nil {
+	if err := json.Unmarshal(resp, &res); err != nil {
 		log.Fatal(err)
 	}
 }
