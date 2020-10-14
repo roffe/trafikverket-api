@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -23,6 +25,8 @@ const (
 const (
 	OptName          = "name"
 	OptValue         = "value"
+	OptShape         = "shape"
+	OptRadius        = "radius"
 	OptObjtype       = "objecttype"
 	OptOrderBy       = "orderby"
 	OptSchemaversion = "schemaversion"
@@ -66,21 +70,34 @@ func (t *Tag) Build(w io.Writer) {
 }
 
 // Do sends the request
-func (t *Tag) Do() (*http.Response, error) {
-	body := bytes.NewBuffer([]byte{})
-	t.Build(body)
+func (t *Tag) Do() ([]byte, error) {
+	buf := bytes.NewBuffer([]byte{})
+	t.Build(buf)
 	if Debug {
-		fmt.Println(body.String())
+		fmt.Println(buf.String())
 	}
 
-	resp, err := http.Post(apiURL, "text/xml", body)
+	resp, err := http.Post(apiURL, "text/xml", buf)
+	if resp.Body != nil {
+		defer resp.Body.Close()
+	}
 	if err != nil {
-		return resp, err
+		return nil, err
 	}
+
 	if resp.StatusCode != 200 {
-		return resp, fmt.Errorf("return code %d", resp.StatusCode)
+		return nil, fmt.Errorf("return code %d", resp.StatusCode)
 	}
-	return resp, nil
+
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }
 
 // Login tag
@@ -127,6 +144,16 @@ func Or(tags ...*Tag) *Tag {
 	}
 }
 
+// Exists Exists
+func Exists(opts Opts, tags ...*Tag) *Tag {
+	return &Tag{
+		tag:      "EXISTS",
+		opts:     opts,
+		short:    true,
+		children: tags,
+	}
+}
+
 // Eq equal tag
 func Eq(opts Opts, tags ...*Tag) *Tag {
 	return &Tag{
@@ -137,7 +164,7 @@ func Eq(opts Opts, tags ...*Tag) *Tag {
 	}
 }
 
-// Gt greate then tag
+// Gt Greater Than
 func Gt(opts Opts) *Tag {
 	return &Tag{
 		tag:   "GT",
@@ -146,10 +173,100 @@ func Gt(opts Opts) *Tag {
 	}
 }
 
-// Lt Lesser then tag
+// Gte Greater Than or Equal
+func Gte(opts Opts) *Tag {
+	return &Tag{
+		tag:   "GTE",
+		opts:  opts,
+		short: true,
+	}
+}
+
+// Lt Less Than
 func Lt(opts Opts) *Tag {
 	return &Tag{
 		tag:   "LT",
+		opts:  opts,
+		short: true,
+	}
+}
+
+// Lte Less Than or Equals
+func Lte(opts Opts) *Tag {
+	return &Tag{
+		tag:   "LTE",
+		opts:  opts,
+		short: true,
+	}
+}
+
+// Ne Not Equal
+func Ne(opts Opts) *Tag {
+	return &Tag{
+		tag:   "NE",
+		opts:  opts,
+		short: true,
+	}
+}
+
+// Like Not Equal
+func Like(opts Opts) *Tag {
+	return &Tag{
+		tag:   "LIKE",
+		opts:  opts,
+		short: true,
+	}
+}
+
+// NotLike Not Equal
+func NotLike(opts Opts) *Tag {
+	return &Tag{
+		tag:   "NOTLIKE",
+		opts:  opts,
+		short: true,
+	}
+}
+
+// In ...
+func In(opts Opts) *Tag {
+	return &Tag{
+		tag:   "IN",
+		opts:  opts,
+		short: true,
+	}
+}
+
+// NotIn ...
+func NotIn(opts Opts) *Tag {
+	return &Tag{
+		tag:   "NOTIN",
+		opts:  opts,
+		short: true,
+	}
+}
+
+// Within ...
+func Within(opts Opts) *Tag {
+	return &Tag{
+		tag:   "WITHIN",
+		opts:  opts,
+		short: true,
+	}
+}
+
+// Intersects ...
+func Intersects(opts Opts) *Tag {
+	return &Tag{
+		tag:   "INTERSECTS",
+		opts:  opts,
+		short: true,
+	}
+}
+
+// Near ...
+func Near(opts Opts) *Tag {
+	return &Tag{
+		tag:   "NEAR",
 		opts:  opts,
 		short: true,
 	}
