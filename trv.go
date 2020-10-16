@@ -51,6 +51,11 @@ func (t *Tag) String() string {
 // Opts holds our tag options <TAG key="value">
 type Opts map[string]string
 
+// Set a opt value
+func (o Opts) Set(key, value string) {
+	o[key] = value
+}
+
 // NewRequest createsa new TRV request
 func NewRequest(apiKey string, query *Tag) *Tag {
 	t := &Tag{
