@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -111,18 +110,15 @@ func (t *Tag) Do() ([]byte, error) {
 		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("return code %d", resp.StatusCode)
-	}
-
-	if err != nil {
-		log.Print(err)
-		return nil, err
-	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
+
+	if resp.StatusCode != 200 {
+		return body, fmt.Errorf("return code %d", resp.StatusCode)
+	}
+
 	return body, nil
 }
 
