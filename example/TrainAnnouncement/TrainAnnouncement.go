@@ -17,17 +17,17 @@ func main() {
 			trv.OptObjtype:       "TrainAnnouncement",
 			trv.OptSchemaversion: "1.6",
 			trv.OptOrderBy:       "AdvertisedTimeAtLocation",
-		}).Tags(
-			trv.Filter().Tags(
-				trv.And().Tags(
+		}).Add(
+			trv.Filter().Add(
+				trv.And().Add(
 					trv.Eq().Opts(trv.Opts{
 						trv.OptName:  "ActivityType",
 						trv.OptValue: "Avgang"}),
 					trv.Eq().Opts(trv.Opts{
 						trv.OptName:  "LocationSignature",
 						trv.OptValue: "Cst"}),
-					trv.Or().Tags(
-						trv.And().Tags(
+					trv.Or().Add(
+						trv.And().Add(
 							trv.Gt().Opts(trv.Opts{
 								trv.OptName:  "AdvertisedTimeAtLocation",
 								trv.OptValue: "$dateadd(-00:15:00)"},
@@ -37,7 +37,7 @@ func main() {
 								trv.OptValue: "$dateadd(14:00:00)"},
 							),
 						),
-						trv.And().Tags(
+						trv.And().Add(
 							trv.Lt().Opts(trv.Opts{
 								trv.OptName:  "AdvertisedTimeAtLocation",
 								trv.OptValue: "$dateadd(00:30:00)"},

@@ -52,26 +52,22 @@ func (o Opts) Set(key, value string) {
 
 // Tag ...
 type Tag struct {
-	tag      string // The tag
-	level    int    // How deep is the tag, for pretty printing
-	children []*Tag // Children tags
-	opts     Opts   // Tag options
-	value    string // The Value inside the <tag></tag>
-	short    bool   // true closes the tag with <TAG/> false closes it with a <TAG></TAG>
-	inline   bool   // Should the opening & closing tags be inline ( on the same line )
+	tag        string // The tag
+	level      int    // How deep is the tag, for pretty printing
+	nochildren bool
+	children   []*Tag // Children tags
+	opts       Opts   // Tag options
+	value      string // The Value inside the <tag></tag>
+	short      bool   // true closes the tag with <TAG/> false closes it with a <TAG></TAG>
+	inline     bool   // Should the opening & closing tags be inline ( on the same line )
 }
 
 func (t *Tag) String() string {
 	return fmt.Sprintf("<%s> <opts: %q> <value: %q> <short: %t> <inline: %t>", t.tag, t.opts, t.value, t.short, t.inline)
 }
 
-// Add a new child to the tag
-func (t *Tag) Add(tag *Tag) {
-	t.children = append(t.children, tag)
-}
-
-// Tags sets children on the tag
-func (t *Tag) Tags(tags ...*Tag) *Tag {
+// Add new child(ren) to the tag
+func (t *Tag) Add(tags ...*Tag) *Tag {
 	t.children = append(t.children, tags...)
 	return t
 }
@@ -82,20 +78,12 @@ func (t *Tag) Opts(opts Opts) *Tag {
 	return t
 }
 
-// Build a TRV query
-func (t *Tag) Build(w io.Writer) {
-	t.start(w)
-	for _, c := range t.children {
-		c.level = t.level + 1
-		c.Build(w)
-	}
-	t.end(w)
-}
-
 // Do sends the request
 func (t *Tag) Do() ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{})
-	t.Build(buf)
+	if err := t.Build(buf); err != nil {
+		return nil, err
+	}
 	if Debug {
 		fmt.Println(buf.String())
 	}
@@ -130,7 +118,8 @@ func Login(key string) *Tag {
 		opts: Opts{
 			"authenticationkey": key,
 		},
-		short: true,
+		short:      true,
+		nochildren: true,
 	}
 }
 
@@ -173,118 +162,154 @@ func Exists() *Tag {
 // Eq equal tag
 func Eq() *Tag {
 	return &Tag{
-		tag:   "EQ",
-		short: true,
+		tag:        "EQ",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // Gt Greater Than
 func Gt() *Tag {
 	return &Tag{
-		tag:   "GT",
-		short: true,
+		tag:        "GT",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // Gte Greater Than or Equal
 func Gte() *Tag {
 	return &Tag{
-		tag:   "GTE",
-		short: true,
+		tag:        "GTE",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // Lt Less Than
 func Lt() *Tag {
 	return &Tag{
-		tag:   "LT",
-		short: true,
+		tag:        "LT",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // Lte Less Than or Equals
 func Lte() *Tag {
 	return &Tag{
-		tag:   "LTE",
-		short: true,
+		tag:        "LTE",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // Ne Not Equal
 func Ne() *Tag {
 	return &Tag{
-		tag:   "NE",
-		short: true,
+		tag:        "NE",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // Like Not Equal
 func Like() *Tag {
 	return &Tag{
-		tag:   "LIKE",
-		short: true,
+		tag:        "LIKE",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // NotLike Not Equal
 func NotLike() *Tag {
 	return &Tag{
-		tag:   "NOTLIKE",
-		short: true,
+		tag:        "NOTLIKE",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // In ...
 func In() *Tag {
 	return &Tag{
-		tag:   "IN",
-		short: true,
+		tag:        "IN",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // NotIn ...
 func NotIn() *Tag {
 	return &Tag{
-		tag:   "NOTIN",
-		short: true,
+		tag:        "NOTIN",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // Within ...
 func Within() *Tag {
 	return &Tag{
-		tag:   "WITHIN",
-		short: true,
+		tag:        "WITHIN",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // Intersects ...
 func Intersects() *Tag {
 	return &Tag{
-		tag:   "INTERSECTS",
-		short: true,
+		tag:        "INTERSECTS",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // Near ...
 func Near() *Tag {
 	return &Tag{
-		tag:   "NEAR",
-		short: true,
+		tag:        "NEAR",
+		short:      true,
+		nochildren: true,
 	}
 }
 
 // Include .tag
 func Include(value string) *Tag {
 	return &Tag{
-		tag:    "INCLUDE",
-		value:  value,
-		inline: true,
+		tag:        "INCLUDE",
+		value:      value,
+		inline:     true,
+		nochildren: true,
 	}
 }
 
+// Build a TRV query
+func (t *Tag) Build(w io.Writer) error {
+	if err := t.start(w); err != nil {
+		return err
+	}
+	if !t.nochildren {
+		for _, c := range t.children {
+			c.level = t.level + 1
+			if err := c.Build(w); err != nil {
+				return err
+			}
+		}
+	}
+	if err := t.end(w); err != nil {
+		return err
+	}
+	return nil
+}
+
 // opens the tag
-func (t *Tag) start(w io.Writer) {
+func (t *Tag) start(w io.Writer) error {
+	if t.nochildren && len(t.children) > 0 {
+		return fmt.Errorf("tag %s should not have any children", t.tag)
+	}
 	if PrettyPrint {
 		w.Write([]byte(strings.Repeat(IndentChar, t.level)))
 	}
@@ -310,18 +335,20 @@ func (t *Tag) start(w io.Writer) {
 	} else {
 		w.Write([]byte("\n"))
 	}
+	return nil
 }
 
 // closes the tag
-func (t *Tag) end(w io.Writer) {
+func (t *Tag) end(w io.Writer) error {
 	// If it's a short or inline tag the start() function renders it in whole
 	if t.short || t.inline {
-		return
+		return nil
 	}
 	if PrettyPrint {
 		w.Write([]byte(strings.Repeat(IndentChar, t.level)))
 	}
 	w.Write([]byte("</" + t.tag + ">\n"))
+	return nil
 }
 
 func (t *Tag) optsString() []byte {
@@ -394,6 +421,6 @@ var verbMap = map[string]FilterFunc{
 
 // VerbToFunc ...
 func VerbToFunc(v string) (FilterFunc, bool) {
-	f, found := verbMap[v]
+	f, found := verbMap[strings.ToUpper(v)]
 	return f, found
 }
