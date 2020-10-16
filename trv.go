@@ -23,24 +23,33 @@ const (
 
 // Named Opt variables
 const (
-	OptName          = "name"
-	OptObjtype       = "objecttype"
-	OptOrderBy       = "orderby"
-	OptRadius        = "radius"
-	OptSchemaversion = "schemaversion"
-	OptShape         = "shape"
-	OptLimit         = "limit"
-	OptValue         = "value"
+	OptName              = "name"
+	OptObjtype           = "objecttype"
+	OptOrderBy           = "orderby"
+	OptRadius            = "radius"
+	OptSchemaversion     = "schemaversion"
+	OptShape             = "shape"
+	OptLimit             = "limit"
+	OptValue             = "value"
+	OptAuthenticationKey = "authenticationkey"
 )
 
 // NewRequest createsa new TRV request
 func NewRequest(apiKey string, query *Tag) *Tag {
-	t := &Tag{
-		tag:      "REQUEST",
-		children: []*Tag{Login(apiKey), query},
-	}
-	return t
+	return Request().Add(
+		Login().Opts(Opts{
+			OptAuthenticationKey: apiKey,
+		}),
+		query,
+	)
 }
+
+/* // TagInterface ...
+type TagInterface interface {
+	Add(...*Tag) *Tag
+	Opts(Opts) *Tag
+	Value(string) *Tag
+} */
 
 // Opts holds our tag options <TAG key="value">
 type Opts map[string]string
@@ -78,6 +87,12 @@ func (t *Tag) Opts(opts Opts) *Tag {
 	return t
 }
 
+// Value sets options on the tag
+func (t *Tag) Value(value string) *Tag {
+	t.value = value
+	return t
+}
+
 // Do sends the request
 func (t *Tag) Do() ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{})
@@ -111,13 +126,17 @@ func (t *Tag) Do() ([]byte, error) {
 	return body, nil
 }
 
-// Login tag
-func Login(key string) *Tag {
+// Request tag
+func Request() *Tag {
 	return &Tag{
-		tag: "LOGIN",
-		opts: Opts{
-			"authenticationkey": key,
-		},
+		tag: "REQUEST",
+	}
+}
+
+// Login tag
+func Login() *Tag {
+	return &Tag{
+		tag:        "LOGIN",
 		short:      true,
 		nochildren: true,
 	}
@@ -154,8 +173,9 @@ func Or() *Tag {
 // Exists Exists
 func Exists() *Tag {
 	return &Tag{
-		tag:   "EXISTS",
-		short: true,
+		tag:        "EXISTS",
+		short:      true,
+		nochildren: true,
 	}
 }
 
@@ -277,10 +297,9 @@ func Near() *Tag {
 }
 
 // Include .tag
-func Include(value string) *Tag {
+func Include() *Tag {
 	return &Tag{
 		tag:        "INCLUDE",
-		value:      value,
 		inline:     true,
 		nochildren: true,
 	}
@@ -310,41 +329,47 @@ func (t *Tag) start(w io.Writer) error {
 	if t.nochildren && len(t.children) > 0 {
 		return fmt.Errorf("tag %s should not have any children", t.tag)
 	}
+
 	if PrettyPrint {
 		w.Write([]byte(strings.Repeat(IndentChar, t.level)))
 	}
 
+	// Write opening for tag
 	w.Write([]byte("<" + t.tag))
 
+	// If there are any options, write them
 	if t.opts != nil {
 		w.Write([]byte(t.optsString()))
 	}
 
+	// If it's a short tag, close it now
 	if t.short {
-		w.Write([]byte("/>"))
-	} else {
-		w.Write([]byte(">"))
+		w.Write([]byte("/>\n"))
+		return nil
 	}
 
+	// Write end of tag opener
+	w.Write([]byte(">"))
+
+	// If the tag has a value write it now
 	if t.value != "" {
 		w.Write([]byte(t.value))
 	}
 
-	if t.inline {
-		w.Write([]byte("</" + t.tag + ">\n"))
-	} else {
+	if !t.inline {
 		w.Write([]byte("\n"))
 	}
+
 	return nil
 }
 
 // closes the tag
 func (t *Tag) end(w io.Writer) error {
-	// If it's a short or inline tag the start() function renders it in whole
-	if t.short || t.inline {
+	// If it's a short tag the start() function renders it in whole
+	if t.short {
 		return nil
 	}
-	if PrettyPrint {
+	if PrettyPrint && !t.inline {
 		w.Write([]byte(strings.Repeat(IndentChar, t.level)))
 	}
 	w.Write([]byte("</" + t.tag + ">\n"))
@@ -396,14 +421,16 @@ func CountyNoToName(n int) string {
 	return name
 }
 
-// FilterFunc ...
-type FilterFunc func() *Tag
+// TagFunc ...
+type TagFunc func() *Tag
 
-var verbMap = map[string]FilterFunc{
+var verbMap = map[string]TagFunc{
 	"QUERY":      Query,
+	"INCLUDE":    Include,
 	"FILTER":     Filter,
 	"AND":        And,
 	"OR":         Or,
+	"EXISTS":     Exists,
 	"EQ":         Eq,
 	"GT":         Gt,
 	"GTE":        Gte,
@@ -420,7 +447,7 @@ var verbMap = map[string]FilterFunc{
 }
 
 // VerbToFunc ...
-func VerbToFunc(v string) (FilterFunc, bool) {
+func VerbToFunc(v string) (TagFunc, bool) {
 	f, found := verbMap[strings.ToUpper(v)]
 	return f, found
 }

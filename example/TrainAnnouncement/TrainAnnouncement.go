@@ -50,10 +50,10 @@ func main() {
 					),
 				),
 			),
-			trv.Include("AdvertisedTrainIdent"),
-			trv.Include("AdvertisedTimeAtLocation"),
-			trv.Include("TrackAtLocation"),
-			trv.Include("ToLocation"),
+			trv.Include().Value("AdvertisedTrainIdent"),
+			trv.Include().Value("AdvertisedTimeAtLocation"),
+			trv.Include().Value("TrackAtLocation"),
+			trv.Include().Value("ToLocation"),
 		),
 	)
 
