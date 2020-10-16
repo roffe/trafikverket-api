@@ -33,6 +33,23 @@ const (
 	OptValue         = "value"
 )
 
+// NewRequest createsa new TRV request
+func NewRequest(apiKey string, query *Tag) *Tag {
+	t := &Tag{
+		tag:      "REQUEST",
+		children: []*Tag{Login(apiKey), query},
+	}
+	return t
+}
+
+// Opts holds our tag options <TAG key="value">
+type Opts map[string]string
+
+// Set a opt value
+func (o Opts) Set(key, value string) {
+	o[key] = value
+}
+
 // Tag ...
 type Tag struct {
 	tag      string // The tag
@@ -48,26 +65,21 @@ func (t *Tag) String() string {
 	return fmt.Sprintf("<%s> <opts: %q> <value: %q> <short: %t> <inline: %t>", t.tag, t.opts, t.value, t.short, t.inline)
 }
 
-// Opts holds our tag options <TAG key="value">
-type Opts map[string]string
-
-// Set a opt value
-func (o Opts) Set(key, value string) {
-	o[key] = value
-}
-
-// NewRequest createsa new TRV request
-func NewRequest(apiKey string, query *Tag) *Tag {
-	t := &Tag{
-		tag:      "REQUEST",
-		children: []*Tag{Login(apiKey), query},
-	}
-	return t
-}
-
 // Add a new child to the tag
 func (t *Tag) Add(tag *Tag) {
 	t.children = append(t.children, tag)
+}
+
+// Tags sets children on the tag
+func (t *Tag) Tags(tags ...*Tag) *Tag {
+	t.children = append(t.children, tags...)
+	return t
+}
+
+// Opts sets options on the tag
+func (t *Tag) Opts(opts Opts) *Tag {
+	t.opts = opts
+	return t
 }
 
 // Build a TRV query
@@ -123,162 +135,141 @@ func Login(key string) *Tag {
 }
 
 // Query tag
-func Query(opts Opts, tags ...*Tag) *Tag {
+func Query() *Tag {
 	return &Tag{
-		tag:      "QUERY",
-		opts:     opts,
-		children: tags,
+		tag: "QUERY",
 	}
 }
 
 // Filter tag
-func Filter(tags ...*Tag) *Tag {
+func Filter() *Tag {
 	return &Tag{
-		tag:      "FILTER",
-		children: tags,
+		tag: "FILTER",
 	}
 }
 
 // And tag
-func And(tags ...*Tag) *Tag {
+func And() *Tag {
 	return &Tag{
-		tag:      "AND",
-		children: tags,
+		tag: "AND",
 	}
 }
 
 // Or tag
-func Or(tags ...*Tag) *Tag {
+func Or() *Tag {
 	return &Tag{
-		tag:      "OR",
-		children: tags,
+		tag: "OR",
 	}
 }
 
 // Exists Exists
-func Exists(opts Opts, tags ...*Tag) *Tag {
+func Exists() *Tag {
 	return &Tag{
-		tag:      "EXISTS",
-		opts:     opts,
-		short:    true,
-		children: tags,
+		tag:   "EXISTS",
+		short: true,
 	}
 }
 
 // Eq equal tag
-func Eq(opts Opts, tags ...*Tag) *Tag {
+func Eq() *Tag {
 	return &Tag{
-		tag:      "EQ",
-		opts:     opts,
-		short:    true,
-		children: tags,
+		tag:   "EQ",
+		short: true,
 	}
 }
 
 // Gt Greater Than
-func Gt(opts Opts) *Tag {
+func Gt() *Tag {
 	return &Tag{
 		tag:   "GT",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // Gte Greater Than or Equal
-func Gte(opts Opts) *Tag {
+func Gte() *Tag {
 	return &Tag{
 		tag:   "GTE",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // Lt Less Than
-func Lt(opts Opts) *Tag {
+func Lt() *Tag {
 	return &Tag{
 		tag:   "LT",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // Lte Less Than or Equals
-func Lte(opts Opts) *Tag {
+func Lte() *Tag {
 	return &Tag{
 		tag:   "LTE",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // Ne Not Equal
-func Ne(opts Opts) *Tag {
+func Ne() *Tag {
 	return &Tag{
 		tag:   "NE",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // Like Not Equal
-func Like(opts Opts) *Tag {
+func Like() *Tag {
 	return &Tag{
 		tag:   "LIKE",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // NotLike Not Equal
-func NotLike(opts Opts) *Tag {
+func NotLike() *Tag {
 	return &Tag{
 		tag:   "NOTLIKE",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // In ...
-func In(opts Opts) *Tag {
+func In() *Tag {
 	return &Tag{
 		tag:   "IN",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // NotIn ...
-func NotIn(opts Opts) *Tag {
+func NotIn() *Tag {
 	return &Tag{
 		tag:   "NOTIN",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // Within ...
-func Within(opts Opts) *Tag {
+func Within() *Tag {
 	return &Tag{
 		tag:   "WITHIN",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // Intersects ...
-func Intersects(opts Opts) *Tag {
+func Intersects() *Tag {
 	return &Tag{
 		tag:   "INTERSECTS",
-		opts:  opts,
 		short: true,
 	}
 }
 
 // Near ...
-func Near(opts Opts) *Tag {
+func Near() *Tag {
 	return &Tag{
 		tag:   "NEAR",
-		opts:  opts,
 		short: true,
 	}
 }
@@ -376,4 +367,33 @@ func CountyNoToName(n int) string {
 		return "Undefined"
 	}
 	return name
+}
+
+// FilterFunc ...
+type FilterFunc func() *Tag
+
+var verbMap = map[string]FilterFunc{
+	"QUERY":      Query,
+	"FILTER":     Filter,
+	"AND":        And,
+	"OR":         Or,
+	"EQ":         Eq,
+	"GT":         Gt,
+	"GTE":        Gte,
+	"LT":         Lt,
+	"LTE":        Lte,
+	"NE":         Ne,
+	"LIKE":       Like,
+	"NOTLIKE":    NotLike,
+	"IN":         In,
+	"NOTIN":      NotIn,
+	"WITHIN":     Within,
+	"INTERSECTS": Intersects,
+	"NEAR":       Near,
+}
+
+// VerbToFunc ...
+func VerbToFunc(v string) (FilterFunc, bool) {
+	f, found := verbMap[v]
+	return f, found
 }
