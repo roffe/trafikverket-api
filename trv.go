@@ -60,6 +60,11 @@ func NewRequest(apiKey string, query *Tag) *Tag {
 	return t
 }
 
+// Add a new child to the tag
+func (t *Tag) Add(tag *Tag) {
+	t.children = append(t.children, tag)
+}
+
 // Build a TRV query
 func (t *Tag) Build(w io.Writer) {
 	t.start(w)
