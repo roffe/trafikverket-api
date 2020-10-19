@@ -103,8 +103,10 @@ func (t *Tag) Do() ([]byte, error) {
 	}
 
 	resp, err := http.Post(apiURL, "text/xml", buf)
-	if resp.Body != nil {
-		defer resp.Body.Close()
+	if resp != nil {
+		if resp.Body != nil {
+			defer resp.Body.Close()
+		}
 	}
 	if err != nil {
 		return nil, err
